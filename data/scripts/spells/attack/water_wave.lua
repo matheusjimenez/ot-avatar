@@ -5,7 +5,7 @@ combat:setParameter(COMBAT_PARAM_DISTANCEEFFECT, CONST_ANI_ICE)
 
 -- Definindo a área da rajada de água (formato de onda)
 local area = {
-    {0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0},
+    {0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0},
     {0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0},
     {0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0},
     {0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0},
@@ -39,21 +39,22 @@ combat:setCallback(CALLBACK_PARAM_LEVELMAGICVALUE, "onGetFormulaValues")
 local spell = Spell("instant")
 
 function spell.onCastSpell(creature, var)
-    -- Permitir que Game Masters usem a magia independentemente da vocação
+    -- Verificar se é um jogador
     if creature:isPlayer() then
-        local player = creature:getPlayer()
+        local player = creature
         
-        -- Verificar se é um Game Master com modo de magia GM ativado
-        if player:getGroup():getAccess() and player:getStorageValue(38912) == 1 then
+        -- Game Masters sempre podem usar a magia
+        if player:getGroup():getAccess() then
             return combat:execute(creature, var)
         end
         
-        -- Para jogadores normais ou GMs sem modo ativado, verificar vocação
-        if player:getVocation():getId() == VOCATION.ID.KNIGHT or player:getVocation():getId() == VOCATION.ID.ELITE_KNIGHT then
+        -- Para jogadores normais, verificar vocação
+        local vocationId = player:getVocation():getId()
+        if vocationId == 4 or vocationId == 8 then -- Knight ou Elite Knight
             return combat:execute(creature, var)
         else
-            creature:sendCancelMessage("Você não pode usar esta magia.")
-            creature:getPosition():sendMagicEffect(CONST_ME_POFF)
+            player:sendCancelMessage("Você não pode usar esta magia.")
+            player:getPosition():sendMagicEffect(CONST_ME_POFF)
             return false
         end
     end
@@ -64,7 +65,7 @@ end
 spell:group("attack")
 spell:id(250) -- ID único para a magia
 spell:name("Water Wave")
-spell:words("exori frigo hur")
+spell:words("w-wave")
 spell:castSound(SOUND_EFFECT_TYPE_SPELL_ENERGY_WAVE) -- Usando som de energy wave como placeholder
 spell:level(50)
 spell:mana(80)

@@ -204,6 +204,20 @@ keywordHandler:addSpellKeyword({ "water", "wave" }, {
 	level = 50,
 	vocation = VOCATION.BASE_ID.KNIGHT,
 })
+keywordHandler:addSpellKeyword({ "cannon", "beam" }, {
+	npcHandler = npcHandler,
+	spellName = "Cannon Beam",
+	price = 2500,
+	level = 60,
+	vocation = VOCATION.BASE_ID.KNIGHT,
+})
+keywordHandler:addSpellKeyword({ "water", "dragon" }, {
+	npcHandler = npcHandler,
+	spellName = "Water Dragon",
+	price = 3000,
+	level = 80,
+	vocation = VOCATION.BASE_ID.KNIGHT,
+})
 
 keywordHandler:addKeyword({ "healing", "spells" }, StdModule.say, {
 	npcHandler = npcHandler,
@@ -212,7 +226,7 @@ keywordHandler:addKeyword({ "healing", "spells" }, StdModule.say, {
 keywordHandler:addKeyword({ "attack", "spells" }, StdModule.say, {
 	npcHandler = npcHandler,
 	text = { "In this category I have '{Whirlwind Throw}', '{Groundshaker}', '{Berserk}' and '{Fierce Berserk}' \z
-		as well as ...", "'{Brutal Strike}', '{Front Sweep}', '{Inflict Wound}', '{Water Wave}' and '{Annihilation}'" },
+		as well as ...", "'{Brutal Strike}', '{Front Sweep}', '{Inflict Wound}', '{Water Wave}', '{Cannon Beam}', '{Water Dragon}' and '{Annihilation}'" },
 })
 keywordHandler:addKeyword({ "support", "spells" }, StdModule.say, {
 	npcHandler = npcHandler,
