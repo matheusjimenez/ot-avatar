@@ -44,15 +44,20 @@ end
 
 combat:setCallback(CALLBACK_PARAM_LEVELMAGICVALUE, "onGetFormulaValues")
 
--- Função para empurrar uma criatura com delay
-function pushCreatureWithDelay(creatureId, newPos, oldPos, delay)
-    addEvent(function()
-        local creature = Creature(creatureId)
-        if creature then
-            creature:teleportTo(newPos)
-            oldPos:sendMagicEffect(CONST_ME_POFF)
-        end
-    end, delay)
+-- Função para empurrar uma criatura
+function push(creature, target)
+    local direction = creature:getDirection()
+    
+    local x = (direction == DIRECTION_EAST and 1 or (direction == DIRECTION_WEST and -1 or 0))
+    local y = (direction == DIRECTION_NORTH and -1 or (direction == DIRECTION_SOUTH and 1 or 0))
+    
+    local position = target:getPosition()
+    position.x = position.x + x
+    position.y = position.y + y
+    
+    if target:teleportTo(position) then
+        position:sendMagicEffect(CONST_ME_POFF)
+    end
 end
 
 -- Função para aplicar efeito com delay
@@ -74,10 +79,10 @@ function onTargetTile(creature, pos)
         return true
     end
     
-    local direction = creature:getDirection()
-    local casterPos = creature:getPosition()
-    
     -- Calcular a distância entre o lançador e o tile alvo
+    local casterPos = creature:getPosition()
+    local direction = creature:getDirection()
+    
     local distance = 0
     if direction == DIRECTION_NORTH then
         distance = casterPos.y - pos.y
@@ -92,31 +97,17 @@ function onTargetTile(creature, pos)
     -- Calcular o delay com base na distância (50ms por tile - mais rápido)
     local delay = math.abs(distance) * 50
     
-    -- Calcular a posição para onde o alvo será empurrado (na direção oposta ao lançador)
-    local pushPos = Position(pos.x, pos.y, pos.z)
-    if direction == DIRECTION_NORTH then
-        pushPos.y = pushPos.y - 2  -- Empurrar mais para o norte
-    elseif direction == DIRECTION_EAST then
-        pushPos.x = pushPos.x + 2  -- Empurrar mais para o leste
-    elseif direction == DIRECTION_SOUTH then
-        pushPos.y = pushPos.y + 2  -- Empurrar mais para o sul
-    elseif direction == DIRECTION_WEST then
-        pushPos.x = pushPos.x - 2  -- Empurrar mais para o oeste
-    end
-    
     -- Aplicar efeito visual no quadrado com delay
     applyEffectWithDelay(pos, CONST_ME_WATERSPLASH, delay)
     
     for _, target in ipairs(creatures) do
         if target ~= creature and target:isCreature() then
-            local targetPos = target:getPosition()
-            
-            -- Verificar se a posição de empurrão é válida
-            local pushTile = Tile(pushPos)
-            if pushTile and not pushTile:hasProperty(CONST_PROP_IMMOVABLEBLOCKSOLID) then
-                -- Empurrar a criatura para a posição calculada com delay
-                pushCreatureWithDelay(target:getId(), pushPos, targetPos, delay + 100)
-            end
+            -- Empurrar a criatura com delay
+            addEvent(function()
+                if target and target:isCreature() then
+                    push(creature, target)
+                end
+            end, delay + 100)
         end
     end
     
