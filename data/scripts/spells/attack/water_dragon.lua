@@ -102,6 +102,15 @@ local function doDamage(creature, target, minDamage, maxDamage)
     
     local damage = math.random(minDamage, maxDamage)
     doTargetCombatHealth(creature:getId(), target, COMBAT_ICEDAMAGE, damage, damage, CONST_ME_ICETORNADO)
+    
+    -- Adicionar efeito de paralisia por 3 segundos
+    if target:isCreature() and not target:isPlayer() then
+        local condition = Condition(CONDITION_PARALYZE)
+        condition:setParameter(CONDITION_PARAM_TICKS, 3000) -- 3 segundos (3000 ms)
+        condition:setFormula(-0.9, 0, -0.9, 0) -- Reduz a velocidade em 90%
+        target:addCondition(condition)
+    end
+    
     return true
 end
 
