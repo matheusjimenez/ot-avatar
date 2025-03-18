@@ -97,17 +97,68 @@ function push(creature, target)
     end
 end
 
+-- Função para verificar se duas posições estão adjacentes (1 sqm de distância)
+local function arePositionsAdjacent(pos1, pos2)
+    local xDiff = math.abs(pos1.x - pos2.x)
+    local yDiff = math.abs(pos1.y - pos2.y)
+    
+    -- Se estão na mesma coordenada z (mesmo andar)
+    if pos1.z == pos2.z then
+        -- Se estão adjacentes horizontalmente, verticalmente ou diagonalmente (1 sqm de distância)
+        if (xDiff <= 1 and yDiff <= 1) and not (xDiff == 0 and yDiff == 0) then
+            return true
+        end
+    end
+    
+    return false
+end
+
 local spell = Spell("instant")
 
 function spell.onCastSpell(creature, var)
+    -- Verifica se é um jogador
+    if not creature:isPlayer() then
+        return false
+    end
+    
+    local player = creature:getPlayer()
+    local target = player:getTarget()
+    
+    -- Verifica se o alvo existe
+    if not target then
+        player:sendCancelMessage("Você precisa selecionar um alvo.")
+        player:getPosition():sendMagicEffect(CONST_ME_POFF)
+        return false
+    end
+    
+    -- Verifica se o alvo está a 1 sqm de distância
+    local playerPos = player:getPosition()
+    local targetPos = target:getPosition()
+    
+    if not arePositionsAdjacent(playerPos, targetPos) then
+        player:sendCancelMessage("Você precisa estar a 1 quadrado de distância do alvo.")
+        playerPos:sendMagicEffect(CONST_ME_POFF)
+        return false
+    end
+    
+    -- Aplicar imobilização ao jogador
+    -- Usando condição CONDITION_ROOTED que impede movimento, mas não paralyze
+    local condition = Condition(CONDITION_ROOTED)
+    condition:setParameter(CONDITION_PARAM_TICKS, 1000) -- 1.5 segundos
+    player:addCondition(condition)
+    
+    -- Efeito visual mostrando que o jogador está travado
+    player:getPosition():sendMagicEffect(CONST_ME_MAGIC_RED)
+    
     -- Executar todos os pulsos do combate com delay
-    for step = 1, 5 do
+    for step = 1, 7 do
         addEvent(function()
             if creature and creature:isCreature() then
                 combats[step]:execute(creature, var)
             end
-        end, (step * 300) - 300)
+        end, (step * 250) - 300)
     end
+    
     return true
 end
 
