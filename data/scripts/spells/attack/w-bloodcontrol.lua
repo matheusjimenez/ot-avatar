@@ -2,117 +2,112 @@ local combat = Combat()
 combat:setParameter(COMBAT_PARAM_TYPE, COMBAT_PHYSICALDAMAGE)
 combat:setParameter(COMBAT_PARAM_EFFECT, 13)
 
--- Definição da área
-local area = {
-    {0, 0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 3, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0, 0}
+-- Definição das áreas para os pulsos do Blood Control
+local areas = {
+    [1] = {
+        {0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 3, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0}
+    },
+    [2] = {
+        {0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 3, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0}
+    },
+    [3] = {
+        {0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 3, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0}
+    },
+    [4] = {
+        {0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 3, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0}
+    },
+    [5] = {
+        {0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 3, 0, 0, 0},
+        {0, 0, 0, 0, 0, 0, 0}
+    }
 }
 
--- Área para os pulsos subsequentes
-local pulseArea = {
-    {0, 0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 3, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0, 0}
-}
+-- Criando os combats para cada pulso
+local combats = {}
+for step = 1, 5 do
+    local stepCombat = Combat()
+    stepCombat:setParameter(COMBAT_PARAM_TYPE, COMBAT_PHYSICALDAMAGE)
+    stepCombat:setParameter(COMBAT_PARAM_EFFECT, 13)
+    stepCombat:setArea(createCombatArea(areas[step]))
+    
+    -- Função para calcular o dano baseado no nível e habilidades do jogador
+    function onGetFormulaValues(player, level, maglevel)
+        local min = (level / 5) + (maglevel * 0.4) + 3
+        local max = (level / 5) + (maglevel * 0.7) + 5
+        return -min, -max
+    end
+    
+    stepCombat:setCallback(CALLBACK_PARAM_LEVELMAGICVALUE, "onGetFormulaValues")
+    
+    -- Função para empurrar criaturas atingidas pela magia
+    function onTargetCreature(creature, target)
+        if target and target:isCreature() and target ~= creature then
+            push(creature, target)
+        end
+        return true
+    end
+    
+    stepCombat:setCallback(CALLBACK_PARAM_TARGETCREATURE, "onTargetCreature")
+    
+    combats[step] = stepCombat
+end
 
-combat:setArea(createCombatArea(area))
+-- Função para empurrar uma criatura
+function push(creature, target)
+    local direction = creature:getDirection()
+    
+    local x = (direction == DIRECTION_EAST and 1 or (direction == DIRECTION_WEST and -1 or 0))
+    local y = (direction == DIRECTION_NORTH and -1 or (direction == DIRECTION_SOUTH and 1 or 0))
+    
+    local position = target:getPosition()
+    position.x = position.x + x
+    position.y = position.y + y
+    
+    if target:teleportTo(position) then
+        position:sendMagicEffect(CONST_ME_POFF)
+    end
+end
 
 local spell = Spell("instant")
 
-function spell.onCastSpell(creature, variant)
-    -- Função para empurrar o alvo
-    local function pushTarget(pos, cid, targetId)
-        local attacker = Creature(cid)
-        local target = Creature(targetId)
-        
-        if not attacker or not target then
-            return false
-        end
-        
-        local direction = attacker:getDirection()
-        local x = 0
-        local y = 0
-        
-        if direction == DIRECTION_NORTH then
-            y = -1
-        elseif direction == DIRECTION_SOUTH then
-            y = 1
-        elseif direction == DIRECTION_EAST then
-            x = 1
-        elseif direction == DIRECTION_WEST then
-            x = -1
-        end
-        
-        local toPos = Position(target:getPosition())
-        toPos.x = toPos.x + x
-        toPos.y = toPos.y + y
-        
-        if target:getTile():queryAdd(target, toPos) == RETURNVALUE_NOERROR then
-            target:teleportTo(toPos, true)
-            return true
-        end
-        
-        return false
-    end
-    
-    -- Função para executar um pulso do combate
-    local function doPulse(cid, variant, count)
-        local creature = Creature(cid)
-        if not creature then
-            return
-        end
-        
-        local targets = {}
-        
-        -- Cria um novo combate para este pulso
-        local pulseCombat = Combat()
-        pulseCombat:setParameter(COMBAT_PARAM_TYPE, COMBAT_PHYSICALDAMAGE)
-        pulseCombat:setParameter(COMBAT_PARAM_EFFECT, 13)
-        pulseCombat:setFormula(COMBAT_FORMULA_LEVELMAGIC, -1, 0, -1, 0)
-        
-        -- Configura a área apropriada
-        if count == 1 then
-            pulseCombat:setArea(createCombatArea(area))
-        else
-            pulseCombat:setArea(createCombatArea(pulseArea))
-        end
-        
-        -- Função de callback para coletar alvos
-        local function onTargetCreature(attacker, target)
-            if target and target:isCreature() then
-                table.insert(targets, target:getId())
+function spell.onCastSpell(creature, var)
+    -- Executar todos os pulsos do combate com delay
+    for step = 1, 5 do
+        addEvent(function()
+            if creature and creature:isCreature() then
+                combats[step]:execute(creature, var)
             end
-            return true
-        end
-        
-        pulseCombat:setCallback(CALLBACK_PARAM_TARGETCREATURE, onTargetCreature)
-        
-        -- Executa o combate
-        pulseCombat:execute(creature, variant)
-        
-        -- Agenda o empurrão para cada alvo após um pequeno delay
-        for _, targetId in ipairs(targets) do
-            addEvent(pushTarget, 100, creature:getPosition(), creature:getId(), targetId)
-        end
-        
-        -- Agenda o próximo pulso se necessário
-        if count < 15 then
-            addEvent(doPulse, 150, cid, variant, count + 1)
-        end
+        end, (step * 300) - 300)
     end
-    
-    -- Inicia a sequência de pulsos
-    doPulse(creature:getId(), variant, 1)
-    
     return true
 end
 
