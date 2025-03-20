@@ -84,7 +84,37 @@ function showChannelingEffect(playerId)
         return
     end
     
-    player:getPosition():sendMagicEffect(CONST_ME_MAGIC_GREEN)
+    local position = player:getPosition()
+    
+    -- Efeitos variados relacionados à terra
+    local effects = {
+        CONST_ME_SMALLPLANTS,
+        CONST_ME_GROUNDSHAKER,
+        CONST_ME_STONES,
+        CONST_ME_HITBYPOISON,
+        CONST_ME_POISONAREA
+    }
+    
+    -- Efeito principal na posição do jogador
+    position:sendMagicEffect(effects[math.random(1, #effects)])
+    
+    -- Efeitos adicionais em um raio de 1 sqm ao redor do jogador
+    for x = -1, 1 do
+        for y = -1, 1 do
+            if x ~= 0 or y ~= 0 then -- Não repetir na posição central
+                local effectPos = Position(position.x + x, position.y + y, position.z)
+                -- 40% de chance de mostrar um efeito nos tiles vizinhos
+                if math.random(1, 100) <= 40 then
+                    effectPos:sendMagicEffect(effects[math.random(1, #effects)])
+                end
+            end
+        end
+    end
+    
+    -- Adicionar tremor no chão e efeito sonoro
+    if math.random(1, 100) <= 50 then
+        position:sendMagicEffect(CONST_ME_GROUNDSHAKER)
+    end
 end
 
 -- Função para verificar movimento durante canalização
@@ -124,8 +154,17 @@ function startDashAfterChanneling(playerId, startPos)
         return
     end
     
-    -- Efeito inicial para mostrar que a magia está sendo lançada
-    player:getPosition():sendMagicEffect(CONST_ME_MAGIC_GREEN)
+    -- Efeito explosivo final antes de começar o dash
+    local position = player:getPosition()
+    for x = -2, 2 do
+        for y = -2, 2 do
+            local effectPos = Position(position.x + x, position.y + y, position.z)
+            addEvent(function() 
+                effectPos:sendMagicEffect(CONST_ME_SMALLPLANTS)
+            end, math.random(0, 200))
+        end
+    end
+    position:sendMagicEffect(CONST_ME_BIGPLANTS)
     
     -- Calculando o número de movimentos para durar 1,5 segundos
     -- Cada movimento ocorre a cada 90ms, então 1500ms / 90ms = aproximadamente 16-17 movimentos
@@ -157,6 +196,20 @@ function spell.onCastSpell(creature, var)
     -- Armazenar a posição inicial do jogador
     local startPos = player:getPosition()
     
+    -- Efeito inicial ao começar a canalizar
+    local position = player:getPosition()
+    position:sendMagicEffect(CONST_ME_MAGIC_GREEN)
+    
+    -- Criar um círculo de energia verde ao redor do jogador
+    for x = -1, 1 do
+        for y = -1, 1 do
+            if math.abs(x) == 1 or math.abs(y) == 1 then
+                local effectPos = Position(position.x + x, position.y + y, position.z)
+                effectPos:sendMagicEffect(CONST_ME_SMALLPLANTS)
+            end
+        end
+    end
+    
     -- Aplicar condição de paralisia por 3 segundos
     local condition = Condition(CONDITION_PARALYZE)
     condition:setParameter(CONDITION_PARAM_TICKS, 3000) -- 3 segundos
@@ -164,11 +217,11 @@ function spell.onCastSpell(creature, var)
     player:addCondition(condition)
     
     -- Informar ao jogador
-    player:sendTextMessage(MESSAGE_STATUS, "Você está canalizando a magia Earth Track. Não se mova por 3 segundos.")
+    player:sendTextMessage(MESSAGE_STATUS, "Você está canalizando a energia da terra. Não se mova por 3 segundos.")
     
-    -- Mostrar efeitos visuais durante a canalização (a cada 500ms)
-    for i = 0, 5 do
-        addEvent(showChannelingEffect, i * 500, player:getId())
+    -- Mostrar efeitos visuais durante a canalização com mais frequência para melhor visual
+    for i = 0, 12 do -- Aumentei o número de efeitos (a cada 250ms)
+        addEvent(showChannelingEffect, i * 250, player:getId())
     end
     
     -- Verificar se o jogador se moveu durante a canalização
