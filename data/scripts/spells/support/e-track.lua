@@ -4,7 +4,7 @@ combat:setParameter(COMBAT_PARAM_EFFECT, CONST_ME_SMALLPLANTS)
 combat:setParameter(COMBAT_PARAM_CREATEITEM, ITEM_FOOTPRINT)
 
 -- Função para verificar se a posição é válida para andar
-function isWalkable(pos)
+function isWalkable(pos, playerId)
     local tile = Tile(pos)
     if not tile then
         return false
@@ -21,13 +21,17 @@ function isWalkable(pos)
     -- Verificar se há criaturas na posição
     local creatures = tile:getCreatures()
     if #creatures > 0 then
+        -- Se só tiver uma criatura e for o próprio jogador, permite o movimento
+        if playerId and #creatures == 1 and creatures[1]:getId() == playerId then
+            return true
+        end
         return false
     end
     
     return true
 end
 
--- Função para o movimento do dash
+-- Função para o movimento do dash (versão simplificada)
 function onDash(cid, count)
     local creature = Creature(cid)
     if not creature then
@@ -41,19 +45,22 @@ function onDash(cid, count)
     
     local position = player:getPosition()
     local direction = player:getDirection()
-    local lookPos = position:getNextPosition(direction)
     
-    -- Verificar se a posição para onde o jogador olha é válida para andar
-    if isWalkable(lookPos) then
-        -- Move o jogador na direção que está olhando
-        player:teleportTo(lookPos)
-        lookPos:sendMagicEffect(CONST_ME_SMALLPLANTS)
-    else
-        -- Se não puder se mover, causa dano ao jogador
-        player:addHealth(-20)
-        position:sendMagicEffect(CONST_ME_POFF)
-        player:sendTextMessage(MESSAGE_STATUS, "Você perdeu 20 pontos de vida.")
+    -- Calcular próxima posição manualmente
+    local lookPos = {x = position.x, y = position.y, z = position.z}
+    if direction == DIRECTION_NORTH then
+        lookPos.y = lookPos.y - 1
+    elseif direction == DIRECTION_SOUTH then
+        lookPos.y = lookPos.y + 1
+    elseif direction == DIRECTION_EAST then
+        lookPos.x = lookPos.x + 1
+    elseif direction == DIRECTION_WEST then
+        lookPos.x = lookPos.x - 1
     end
+    
+    -- Tentar mover o jogador
+    player:teleportTo(Position(lookPos.x, lookPos.y, lookPos.z))
+    Position(lookPos.x, lookPos.y, lookPos.z):sendMagicEffect(CONST_ME_SMALLPLANTS)
 end
 
 local spell = Spell("instant")

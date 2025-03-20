@@ -1,5 +1,5 @@
 local spellConfig = {
-    {effect = CONST_ME_HITBYPOISON,
+    {effect = CONST_ME_MAGIC_BLUE,
      area = createCombatArea({
         {1, 2, 1},
         {0, 0, 0},
@@ -21,7 +21,7 @@ local spellConfig = {
         {0, 1, 0, 0, 1},
         {1, 0, 1, 0, 0}})
     },
-    {effect = CONST_ME_HITBYPOISON,
+    {effect = CONST_ME_ICEAREA,
      area = createCombatArea({
         {0, 0, 1, 0, 1},
         {1, 0, 2, 0, 1},
@@ -39,7 +39,7 @@ local spellConfig = {
         {0, 0, 1, 0, 0, 0, 0},
         {0, 0, 1, 0, 1, 0, 0}})
     },
-    {effect = CONST_ME_HITBYPOISON,
+    {effect = CONST_ME_WATER_DROP,
      area = createCombatArea({
         {0, 0, 1, 0, 1, 0, 0},
         {0, 1, 0, 1, 0, 1, 0},
@@ -49,7 +49,7 @@ local spellConfig = {
         {1, 0, 0, 1, 0, 1, 0},
         {0, 0, 1, 0, 1, 0, 0}})
     },
-    {effect = CONST_ME_HITBYPOISON,
+    {effect = CONST_ME_WATER_DROP,
      area = createCombatArea({
         {0, 0, 1, 0, 1, 0, 0},
         {0, 1, 0, 1, 0, 1, 0},
@@ -70,10 +70,10 @@ local function applyPoisonEffect(creature, target)
     -- Criar condição de veneno (duração de 10 segundos)
     local condition = Condition(CONDITION_POISON)
     condition:setParameter(CONDITION_PARAM_DELAYED, true)
-    condition:setParameter(CONDITION_PARAM_MINVALUE, 15) -- Dano mínimo por tick
-    condition:setParameter(CONDITION_PARAM_MAXVALUE, 30) -- Dano máximo por tick
-    condition:setParameter(CONDITION_PARAM_STARTVALUE, 30) -- Dano inicial
-    condition:setParameter(CONDITION_PARAM_TICKINTERVAL, 3000) -- Intervalo entre ticks (3 segundos)
+    condition:setParameter(CONDITION_PARAM_MINVALUE, 125) -- Dano mínimo por tick
+    condition:setParameter(CONDITION_PARAM_MAXVALUE, 150) -- Dano máximo por tick
+    condition:setParameter(CONDITION_PARAM_STARTVALUE, 150) -- Dano inicial
+    condition:setParameter(CONDITION_PARAM_TICKINTERVAL, 1000) -- Intervalo entre ticks (3 segundos)
     condition:setParameter(CONDITION_PARAM_FORCEUPDATE, true)
     condition:setParameter(CONDITION_PARAM_TICKS, 10000) -- Duração total (10 segundos)
     
@@ -86,7 +86,7 @@ end
 local combats = {}
 for i, config in ipairs(spellConfig) do
     local combat = Combat()
-    combat:setParameter(COMBAT_PARAM_TYPE, COMBAT_EARTHDAMAGE)
+    combat:setParameter(COMBAT_PARAM_TYPE, COMBAT_ICEDAMAGE)
     combat:setParameter(COMBAT_PARAM_EFFECT, config.effect)
     combat:setArea(config.area)
     
@@ -103,7 +103,7 @@ for i, config in ipairs(spellConfig) do
     function onTargetTile(creature, pos)
         local basePos = creature:getPosition()
         local fromPos = Position(basePos.x - 6, basePos.y - 8, basePos.z)
-        fromPos:sendDistanceEffect(pos, CONST_ANI_SMALLEARTH)
+        fromPos:sendDistanceEffect(pos, CONST_ANI_SMALLICE)
     end
     
     combat:setCallback(CALLBACK_PARAM_TARGETTILE, "onTargetTile")

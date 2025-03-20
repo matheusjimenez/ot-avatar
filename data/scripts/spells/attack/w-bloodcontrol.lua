@@ -53,7 +53,7 @@ local areas = {
 
 -- Criando os combats para cada pulso
 local combats = {}
-for step = 1, 5 do
+for step = 1, 10 do
     local stepCombat = Combat()
     stepCombat:setParameter(COMBAT_PARAM_TYPE, COMBAT_PHYSICALDAMAGE)
     stepCombat:setParameter(COMBAT_PARAM_EFFECT, 13)
