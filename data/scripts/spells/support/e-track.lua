@@ -18,6 +18,11 @@ function isWalkable(pos, playerId)
         return false
     end
     
+    -- Verificar se é uma protection zone
+    if tile:hasFlag(TILESTATE_PROTECTIONZONE) then
+        return false
+    end
+    
     -- Verificar se há criaturas na posição
     local creatures = tile:getCreatures()
     if #creatures > 0 then
@@ -58,9 +63,80 @@ function onDash(cid, count)
         lookPos.x = lookPos.x - 1
     end
     
-    -- Tentar mover o jogador
-    player:teleportTo(Position(lookPos.x, lookPos.y, lookPos.z))
-    Position(lookPos.x, lookPos.y, lookPos.z):sendMagicEffect(CONST_ME_SMALLPLANTS)
+    -- Verificar se a posição de destino é válida
+    local destPos = Position(lookPos.x, lookPos.y, lookPos.z)
+    if isWalkable(destPos, player:getId()) then
+        -- Tentar mover o jogador
+        player:teleportTo(destPos)
+        destPos:sendMagicEffect(CONST_ME_SMALLPLANTS)
+    else
+        -- Se não puder se mover, causa dano ao jogador
+        player:addHealth(-20)
+        position:sendMagicEffect(CONST_ME_POFF)
+        player:sendTextMessage(MESSAGE_STATUS, "Você perdeu 20 pontos de vida.")
+    end
+end
+
+-- Função para mostrar o efeito de canalização
+function showChannelingEffect(playerId)
+    local player = Player(playerId)
+    if not player then
+        return
+    end
+    
+    player:getPosition():sendMagicEffect(CONST_ME_MAGIC_GREEN)
+end
+
+-- Função para verificar movimento durante canalização
+function checkPlayerMovement(playerId, startPos)
+    local player = Player(playerId)
+    if not player then
+        return false
+    end
+    
+    local currentPos = player:getPosition()
+    
+    -- Verifica se o jogador se moveu
+    if currentPos.x ~= startPos.x or currentPos.y ~= startPos.y or currentPos.z ~= startPos.z then
+        return false
+    end
+    
+    return true
+end
+
+-- Função para iniciar o dash após a canalização
+function startDashAfterChanneling(playerId, startPos)
+    local player = Player(playerId)
+    if not player then
+        return
+    end
+    
+    -- Verifica se o jogador ainda está na mesma posição
+    if not checkPlayerMovement(playerId, startPos) then
+        player:sendTextMessage(MESSAGE_STATUS, "Sua magia foi interrompida porque você se moveu.")
+        return
+    end
+    
+    -- Verificar se o jogador está em uma protection zone
+    local tile = Tile(player:getPosition())
+    if tile and tile:hasFlag(TILESTATE_PROTECTIONZONE) then
+        player:sendTextMessage(MESSAGE_STATUS, "Você não pode usar esta magia em uma zona de proteção.")
+        return
+    end
+    
+    -- Efeito inicial para mostrar que a magia está sendo lançada
+    player:getPosition():sendMagicEffect(CONST_ME_MAGIC_GREEN)
+    
+    -- Calculando o número de movimentos para durar 1,5 segundos
+    -- Cada movimento ocorre a cada 90ms, então 1500ms / 90ms = aproximadamente 16-17 movimentos
+    local movementCount = 17
+    
+    for i = 0, movementCount - 1 do
+        addEvent(onDash, 90 * i, playerId, i)
+    end
+    
+    -- Remover a condição de paralisia
+    player:removeCondition(CONDITION_PARALYZE)
 end
 
 local spell = Spell("instant")
@@ -71,16 +147,41 @@ function spell.onCastSpell(creature, var)
         return false
     end
     
-    -- Calculando o número de movimentos para durar 1,5 segundos
-    -- Cada movimento ocorre a cada 90ms, então 1500ms / 90ms = aproximadamente 16-17 movimentos
-    local movementCount = 17
-    
-    -- Efeito inicial para mostrar que a magia está sendo lançada
-    player:getPosition():sendMagicEffect(CONST_ME_MAGIC_GREEN)
-    
-    for i = 0, movementCount - 1 do
-        addEvent(onDash, 90 * i, player:getId(), i)
+    -- Verificar se o jogador está em uma protection zone
+    local tile = Tile(player:getPosition())
+    if tile and tile:hasFlag(TILESTATE_PROTECTIONZONE) then
+        player:sendTextMessage(MESSAGE_STATUS, "Você não pode usar esta magia em uma zona de proteção.")
+        return false
     end
+    
+    -- Armazenar a posição inicial do jogador
+    local startPos = player:getPosition()
+    
+    -- Aplicar condição de paralisia por 3 segundos
+    local condition = Condition(CONDITION_PARALYZE)
+    condition:setParameter(CONDITION_PARAM_TICKS, 3000) -- 3 segundos
+    condition:setFormula(-1, 0, -1, 0)
+    player:addCondition(condition)
+    
+    -- Informar ao jogador
+    player:sendTextMessage(MESSAGE_STATUS, "Você está canalizando a magia Earth Track. Não se mova por 3 segundos.")
+    
+    -- Mostrar efeitos visuais durante a canalização (a cada 500ms)
+    for i = 0, 5 do
+        addEvent(showChannelingEffect, i * 500, player:getId())
+    end
+    
+    -- Verificar se o jogador se moveu durante a canalização
+    for i = 1, 2 do
+        addEvent(function()
+            if not checkPlayerMovement(player:getId(), startPos) then
+                player:sendTextMessage(MESSAGE_STATUS, "Verificando se você se moveu...")
+            end
+        end, i * 1000)
+    end
+    
+    -- Iniciar o dash após o período de canalização (3 segundos)
+    addEvent(startDashAfterChanneling, 3000, player:getId(), startPos)
     
     return true
 end
